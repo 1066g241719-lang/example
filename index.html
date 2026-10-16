@@ -1,0 +1,193 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <meta http-equiv="Content-Security-Policy" content="default-src * data: gap: content: https://ssl.gstatic.com; style-src * 'unsafe-inline'; script-src * 'unsafe-inline' 'unsafe-eval'">
+    <script src="components/loader.js"></script>
+    <link rel="stylesheet" href="components/loader.css">
+    <link rel="stylesheet" href="css/style.css">
+    <script>
+        let time;
+        let count;
+        let id;
+        let dom;
+        let sounds;
+        let isRunning = false;
+
+        function count2time(count) {                            
+            let seconds, minutes, time;
+            minutes = Math.floor(count / 60);
+            minutes = ("0" + minutes).slice(-2);
+            seconds = count % 60;
+            seconds = ("0" + seconds).slice(-2);
+            time = minutes + ":" + seconds;
+            return time;
+        }
+
+        function init() {
+            let presetSelect = document.getElementById("presetSelect");
+            let selectedValue = presetSelect.value;
+
+            if (selectedValue !== "custom") {
+                count = parseInt(selectedValue, 10);
+            } else {
+                let m = parseInt(document.getElementById("customMin").value, 10) || 0;
+                let s = parseInt(document.getElementById("customSec").value, 10) || 0;
+                count = m * 60 + s;
+            }
+
+            time = count2time(count);
+            dom = document.getElementById("count");
+            dom.textContent = time;
+
+            sounds = {
+                start: new Audio('start.mp3'),
+                s60: new Audio('s60.mp3'),
+                s30: new Audio('s30.mp3'),
+                s10: new Audio('s10.mp3'),
+                end: new Audio('end.mp3'),
+            };
+        }
+
+        function startTimer() {
+            if (isRunning) return;
+            
+            let presetSelect = document.getElementById("presetSelect");
+            if (presetSelect.value === "custom") {
+                let m = parseInt(document.getElementById("customMin").value, 10) || 0;
+                let s = parseInt(document.getElementById("customSec").value, 10) || 0;
+                count = m * 60 + s;
+            }
+
+            if (count <= 0) {
+                alert("1秒以上の時間を設定してください。");
+                return;
+            }
+
+            isRunning = true;
+            toggleControls(true);
+            sounds.start.play();
+            
+            let selectedOptionText = presetSelect.options[presetSelect.selectedIndex].text;
+            writeMessage("【計測開始】" + selectedOptionText);
+            
+            runTimer();
+        }
+
+        function runTimer() {
+            if (count == 60) {
+                sounds.s60.play();
+                writeMessage("残り1分！最終チェックを行ってください。");
+            } else if (count == 30) {
+                sounds.s30.play();
+                writeMessage("残り30秒！上げ・上げの準備を！");
+            } else if (count == 10) {
+                sounds.s10.play();
+                writeMessage("残り10秒！カウントダウン！");
+            } else if (count == 0) {
+                sounds.end.play();
+                writeMessage("タイムアップ！出来上がりです！");
+                dom.textContent = "00:00";
+                resetTimer();
+                return;
+            }
+
+            time = count2time(count);
+            dom.textContent = time;
+            count--;
+
+            id = setTimeout(runTimer, 1000);
+        }
+
+        function stopTimer() {
+            if (!isRunning) return;
+            clearTimeout(id);
+            isRunning = false;
+            toggleControls(false);
+            writeMessage("一時停止しました。");
+        }
+
+        function resetTimer() {
+            clearTimeout(id);
+            isRunning = false;
+            toggleControls(false);
+            document.getElementById('messageArea').innerHTML = "";
+            init();
+        }
+
+        function changePreset() {
+            let presetSelect = document.getElementById("presetSelect");
+            let customInput = document.getElementById("customInputArea");
+
+            if (presetSelect.value === "custom") {
+                customInput.style.display = "block";
+            } else {
+                customInput.style.display = "none";
+            }
+            resetTimer();
+        }
+
+        function toggleControls(disabled) {
+            document.getElementById("start").disabled = disabled;
+            document.getElementById("presetSelect").disabled = disabled;
+            document.getElementById("customMin").disabled = disabled;
+            document.getElementById("customSec").disabled = disabled;
+        }
+
+        function writeMessage(message) {
+            let messageArea = document.getElementById('messageArea');
+            let currentMessage = messageArea.innerHTML;
+            messageArea.innerHTML = "・" + message + "<br>" + currentMessage;
+        }
+    </script>
+</head>
+<body onload="init()">
+    <h1>極・調理タイマー</h1>
+
+    <div style="text-align: center;">
+        <select id="presetSelect" onchange="changePreset()">
+            <!-- 王道調理 -->
+            <optgroup label="定番・料理">
+                <option value="180" selected>カップ麺（3分）</option>
+                <option value="300">カップ麺（5分）</option>
+                <option value="420">ゆで卵：トロトロ半熟（7分）</option>
+                <option value="600">ゆで卵：固ゆで（10分）</option>
+                <option value="480">パスタ：標準（8分）</option>
+            </optgroup>
+            
+            <!-- マニアック・こだわり調理 -->
+            <optgroup label="マニアック・こだわり">
+                <option value="45">バリカタラーメン（45秒）</option>
+                <option value="150">ドリップコーヒー粉の蒸らし＋抽出（2分30秒）</option>
+                <option value="300">紅茶（高級アッサムの抽出 5分）</option>
+                <option value="90">ステーキ肉の裏返しタイミング（1分30秒）</option>
+                <option value="180">ステーキのアルミホイル余熱休ませ（3分）</option>
+                <option value="720">温泉卵（沸騰後放置 12分）</option>
+                <option value="1800">低温調理ローストビーフ余熱（30分）</option>
+                <option value="240">緑茶・玉露のじっくり抽出（4分）</option>
+            </optgroup>
+
+            <!-- 自由設定 -->
+            <optgroup label="その他">
+                <option value="custom">秒単位カスタム入力</option>
+            </optgroup>
+        </select>
+    </div>
+
+    <div id="customInputArea" style="display: none; text-align: center; margin-top: 10px;">
+        <input type="number" id="customMin" min="0" max="99" value="1" style="width: 50px;"> 分
+        <input type="number" id="customSec" min="0" max="59" value="0" style="width: 50px;"> 秒
+    </div>
+
+    <time id="count">00:00</time>
+    
+    <div style="text-align: center;">
+        <button onclick="startTimer();" id="start">スタート</button>
+        <button onclick="stopTimer();" id="stop">ストップ</button>
+        <button onclick="resetTimer();" id="reset">リセット</button>
+    </div>
+
+    <div id="messageArea"></div>
+</body>
+</html>
